@@ -198,7 +198,8 @@ export default {
   name: 'App',
   data() {
     return {
-      // API URL - Change this when deploying to production
+      // API URL - Using localhost for local development
+      // Set VUE_APP_API_URL environment variable for production deployment
       API_URL: process.env.VUE_APP_API_URL || 'http://localhost:3000',
       currentPage: 'lessons',
       lessons: [],
