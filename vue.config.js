@@ -1,4 +1,5 @@
 module.exports = {
+<<<<<<< HEAD
   publicPath: process.env.NODE_ENV === 'production' ? '/bookstore-frontend/' : '/',
   lintOnSave: false,
   devServer: {
@@ -10,3 +11,7 @@ module.exports = {
     }
   }
 }
+=======
+  publicPath: process.env.NODE_ENV === 'production' ? '/bookstore-frontend/' : '/'
+};
+>>>>>>> 4cc529945eb3d2145aa3f185936fb7b154b2a654
