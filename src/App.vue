@@ -18,31 +18,19 @@
         <div class="col-12">
           <h2>📋 Available Books</h2>
           
-          <!-- Search Bar (Challenge Component) -->
-          <div class="search-bar mb-3">
-            <div class="input-group">
-              <div class="input-group-prepend">
-                <span class="input-group-text">🔍</span>
-              </div>
-              <input 
-                type="text" 
-                class="form-control form-control-lg" 
-                placeholder="Search books by title, genre, price, or stock... (search as you type)"
-                v-model="searchQuery"
-                @input="onSearchInput">
-              <div class="input-group-append" v-if="searchQuery">
-                <button class="btn btn-outline-secondary" @click="clearSearch">
-                  ❌ Clear
-                </button>
-              </div>
-            </div>
-            <small class="text-muted" v-if="searchQuery">
-              Showing {{ displayedLessons.length }} result(s) for "{{ searchQuery }}"
-            </small>
+          <!-- Search Bar -->
+          <div class="search-box mb-3">
+            <label>🔍 Search Books:</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              v-model="searchQuery"
+              placeholder="Search by title or genre...">
           </div>
-          
+
+          <!-- Sort Controls -->
           <div class="sort-controls">
-            <label>🔍 Sort by:</label>
+            <label>📊 Sort by:</label>
             <select class="form-control d-inline-block w-auto mx-2" v-model="sortBy">
               <option value="subject">Title</option>
               <option value="location">Genre</option>
@@ -58,7 +46,7 @@
       </div>
 
       <div class="row">
-        <div class="col-md-4 mb-4" v-for="lesson in displayedLessons" :key="lesson.id">
+        <div class="col-md-4 mb-4" v-for="lesson in filteredAndSortedLessons" :key="lesson.id">
           <div class="card h-100">
             <div class="card-body">
               <h5 class="card-title">{{ lesson.emoji }} {{ lesson.subject }}</h5>
@@ -78,13 +66,10 @@
         </div>
       </div>
       
-      <!-- No results message -->
-      <div v-if="searchQuery && displayedLessons.length === 0" class="row">
-        <div class="col-12 text-center mt-5">
-          <h3>😔 No books found</h3>
-          <p>Try searching for something else...</p>
-          <button class="btn btn-primary" @click="clearSearch">Clear Search</button>
-        </div>
+      <!-- No Results Message -->
+      <div v-if="filteredAndSortedLessons.length === 0" class="text-center mt-5">
+        <h3>No books found 📚</h3>
+        <p>Try adjusting your search query</p>
       </div>
     </div>
 
@@ -158,6 +143,7 @@
                     type="text" 
                     class="form-control" 
                     v-model="checkoutForm.name"
+                    @input="filterLettersOnly"
                     pattern="[A-Za-z ]+"
                     required>
                 </div>
@@ -167,6 +153,7 @@
                     type="tel" 
                     class="form-control" 
                     v-model="checkoutForm.phone"
+                    @input="filterNumbersOnly"
                     pattern="[0-9]+"
                     required>
                 </div>
@@ -198,17 +185,12 @@ export default {
   name: 'App',
   data() {
     return {
-      // API URL - Using localhost for local development
-      // Set VUE_APP_API_URL environment variable for production deployment
-      API_URL: process.env.VUE_APP_API_URL || 'http://localhost:3000',
       currentPage: 'lessons',
       lessons: [],
-      searchResults: [], // For search functionality
-      searchQuery: '', // Search input value
-      searchDebounceTimer: null, // For debouncing search
       cartItems: [],
       sortBy: 'subject',
       sortOrder: 'asc',
+      searchQuery: '',
       checkoutForm: {
         name: '',
         phone: ''
@@ -216,22 +198,24 @@ export default {
     }
   },
   computed: {
-    // Determine which lessons to display (search results or all lessons)
-    displayedLessons() {
-      const lessonsToSort = this.searchQuery ? this.searchResults : this.lessons;
-      
-      // Apply sorting
-      return [...lessonsToSort].sort((a, b) => {
+    filteredLessons() {
+      if (!this.searchQuery) {
+        return this.lessons
+      }
+      const query = this.searchQuery.toLowerCase()
+      return this.lessons.filter(lesson => {
+        return lesson.subject.toLowerCase().includes(query) ||
+               lesson.location.toLowerCase().includes(query)
+      })
+    },
+    filteredAndSortedLessons() {
+      return [...this.filteredLessons].sort((a, b) => {
         let modifier = this.sortOrder === 'asc' ? 1 : -1
         if (this.sortBy === 'price' || this.sortBy === 'spaces') {
           return (a[this.sortBy] - b[this.sortBy]) * modifier
         }
         return a[this.sortBy].localeCompare(b[this.sortBy]) * modifier
       })
-    },
-    sortedLessons() {
-      // Keep for backwards compatibility
-      return this.displayedLessons;
     },
     cartTotal() {
       return this.cartItems.reduce((total, item) => total + item.price, 0)
@@ -247,9 +231,17 @@ export default {
     this.fetchBooks();
   },
   methods: {
+    filterLettersOnly(event) {
+      // Allow only letters and spaces
+      this.checkoutForm.name = event.target.value.replace(/[^A-Za-z ]/g, '');
+    },
+    filterNumbersOnly(event) {
+      // Allow only numbers
+      this.checkoutForm.phone = event.target.value.replace(/[^0-9]/g, '');
+    },
     async fetchBooks() {
       try {
-        const response = await fetch(`${this.API_URL}/api/books`);
+        const response = await fetch('http://localhost:3000/api/books');
         const data = await response.json();
         this.lessons = data.map(book => ({
           ...book,
@@ -260,55 +252,10 @@ export default {
         alert('Failed to load books. Please try again later.');
       }
     },
-    
-    // Search functionality (Challenge Component - 10%)
-    async searchBooks(query) {
-      try {
-        console.log(`🔍 Searching for: "${query}"`);
-        const response = await fetch(`${this.API_URL}/api/search?q=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        this.searchResults = data.map(book => ({
-          ...book,
-          id: book._id
-        }));
-        console.log(`✅ Found ${this.searchResults.length} results`);
-      } catch (error) {
-        console.error('Error searching books:', error);
-        alert('Failed to search books. Please try again.');
-      }
-    },
-    
-    // Search as you type with debouncing (3% bonus)
-    onSearchInput() {
-      // Clear existing timer
-      if (this.searchDebounceTimer) {
-        clearTimeout(this.searchDebounceTimer);
-      }
-      
-      // If search is empty, show all lessons
-      if (!this.searchQuery || this.searchQuery.trim() === '') {
-        this.searchResults = [];
-        return;
-      }
-      
-      // Debounce: wait 300ms after user stops typing before searching
-      this.searchDebounceTimer = setTimeout(() => {
-        this.searchBooks(this.searchQuery);
-      }, 300);
-    },
-    
-    // Clear search
-    clearSearch() {
-      this.searchQuery = '';
-      this.searchResults = [];
-      if (this.searchDebounceTimer) {
-        clearTimeout(this.searchDebounceTimer);
-      }
-    },
     async addToCart(lesson) {
       if (lesson.spaces > 0) {
         try {
-          const response = await fetch(`${this.API_URL}/api/books/${lesson.id}`, {
+          const response = await fetch(`http://localhost:3000/api/books/${lesson.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json'
@@ -317,9 +264,12 @@ export default {
           });
 
           if (response.ok) {
-            this.cartItems.push({...lesson});
+            // Update local lessons array first
             const lessonIndex = this.lessons.findIndex(l => l.id === lesson.id);
             this.lessons[lessonIndex].spaces--;
+            
+            // Add updated item to cart with correct spaces value
+            this.cartItems.push({...this.lessons[lessonIndex]});
           } else {
             throw new Error('Failed to update book stock');
           }
@@ -331,7 +281,7 @@ export default {
     },
     async removeFromCart(item) {
       try {
-        const response = await fetch(`${this.API_URL}/api/books/${item.id}`, {
+        const response = await fetch(`http://localhost:3000/api/books/${item.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -367,7 +317,7 @@ export default {
             }))
           };
 
-          const response = await fetch(`${this.API_URL}/api/orders`, {
+          const response = await fetch('http://localhost:3000/api/orders', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -416,23 +366,15 @@ export default {
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
-.search-bar {
+.search-box {
   background: white;
-  padding: 20px;
+  padding: 15px;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-.search-bar input {
-  font-size: 1.1rem;
-}
-
-.search-bar .input-group-text {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  font-size: 1.2rem;
+.search-box input {
+  margin-top: 5px;
 }
 
 .sort-controls {
