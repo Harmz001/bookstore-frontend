@@ -1,4 +1,5 @@
 module.exports = {
+  publicPath: process.env.NODE_ENV === 'production' ? '/bookstore-frontend/' : '/',
   lintOnSave: false,
   devServer: {
     port: 8080,
