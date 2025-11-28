@@ -241,7 +241,7 @@ export default {
     },
     async fetchBooks() {
       try {
-        const response = await fetch('http://localhost:3000/api/books');
+        const response = await fetch('https://bookstore-backend-xd2r.onrender.com/api/books');
         const data = await response.json();
         this.lessons = data.map(book => ({
           ...book,
@@ -255,7 +255,7 @@ export default {
     async addToCart(lesson) {
       if (lesson.spaces > 0) {
         try {
-          const response = await fetch(`http://localhost:3000/api/books/${lesson.id}`, {
+          const response = await fetch(`https://bookstore-backend-xd2r.onrender.com/api/books/${lesson.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json'
@@ -281,7 +281,7 @@ export default {
     },
     async removeFromCart(item) {
       try {
-        const response = await fetch(`http://localhost:3000/api/books/${item.id}`, {
+        const response = await fetch(`https://bookstore-backend-xd2r.onrender.com/api/books/${item.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -317,7 +317,7 @@ export default {
             }))
           };
 
-          const response = await fetch('http://localhost:3000/api/orders', {
+          const response = await fetch('https://bookstore-backend-xd2r.onrender.com/api/orders', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
